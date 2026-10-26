@@ -233,9 +233,9 @@ body{position:relative;isolation:isolate}.staticrypt-content{background:transpar
                     <form id="staticrypt-form" action="#" method="post">
                         <label class="wealth-password-label" for="staticrypt-password">入境密令</label>
 <div class="staticrypt-password-container">
-                            <input
+                            <input aria-describedby="wealth-ime-hint" spellcheck="false" autocapitalize="off" autocomplete="off"
                                 id="staticrypt-password"
-                                type="password"
+                                type="text"
                                 name="password"
                                 placeholder="入境密令"
                                 autofocus
@@ -249,7 +249,8 @@ body{position:relative;isolation:isolate}.staticrypt-content{background:transpar
                             />
                         </div>
 
-                        <label id="staticrypt-remember-label" class="staticrypt-remember hidden">
+                        <p id="wealth-ime-hint" style="font-size:12px;line-height:1.5;color:#485e50;text-align:left;margin:0 0 14px">中文输入时可见，点眼睛可隐藏</p>
+<label id="staticrypt-remember-label" class="staticrypt-remember hidden">
                             <input id="staticrypt-remember" type="checkbox" name="remember" />
                             Remember me
                         </label>
@@ -930,5 +931,46 @@ exports.init = init;
                 }
             });
         </script>
-    </body>
+    <script id="wealth-ime-fix-v1">
+/* Chinese-entry UI only. Never reads, copies, stores, or logs the field value. */
+(() => {
+  'use strict';
+  const input = document.getElementById('staticrypt-password');
+  const form = document.getElementById('staticrypt-form');
+  const eye = document.querySelector('.staticrypt-toggle-password-visibility');
+  if (!input || !form || !eye) return;
+
+  // The HTML starts as text, avoiding native secure-entry mode on first focus.
+  // Keep StatiCrypt's original click handler and update its initial visual state.
+  if (typeof imgSrcEyeOpened !== 'undefined') eye.src = imgSrcEyeOpened;
+  eye.alt = eye.title = '隐藏密令';
+  const hint = document.getElementById('wealth-ime-hint');
+  eye.addEventListener('click', () => {
+    const visible = input.type === 'text';
+    eye.alt = eye.title = visible ? '隐藏密令' : '显示密令';
+    if (hint) hint.textContent = visible
+      ? '中文输入时可见，点眼睛可隐藏'
+      : '密令已隐藏';
+  });
+
+  let composing = false;
+  let imeKey = false;
+  input.addEventListener('compositionstart', () => { composing = true; imeKey = true; });
+  input.addEventListener('compositionend', () => { composing = false; });
+  input.addEventListener('keydown', (event) => {
+    // 229 covers older Safari's compositionend-before-keydown ordering.
+    imeKey = composing || event.isComposing || event.keyCode === 229;
+    // Do not prevent the keydown: the IME must be able to accept its candidate.
+  });
+  input.addEventListener('blur', () => { composing = false; imeKey = false; });
+  form.addEventListener('pointerdown', () => { if (!composing) imeKey = false; });
+  form.addEventListener('submit', (event) => {
+    if (composing || imeKey) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+})();
+</script>
+</body>
 </html>
